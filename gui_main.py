@@ -1,8 +1,7 @@
 
-from core import ImageProcessor, Encryption, Embedder, Extractor
+from core import ImageProcessor, Embedder, Extractor
 import tkinter as tk
 from tkinter import filedialog, messagebox
-from PIL import ImageTk, Image
 import os
 
 
