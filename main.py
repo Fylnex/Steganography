@@ -9,15 +9,17 @@ if __name__ == "__main__":
     embedder = Embedder()
     extractor = Extractor()
 
-    # Путь к изображению и данным
-    image_path = "tests/image/pngwing.com.png" # Путь к изображению
-    data_path = "tests/text/exam.txt" # Путь к текстовому файла
-    output_image_path = os.path.join(os.path.expanduser('~'), 'Downloads', 'modified_image.png') # Путь к выходному изображению
-    password = "securepassword" # Пароль для шифрования и дешифрования
+    # Путь к изображениям и данным
+    image_path = "tests/image/pngwing.com.png"
+    data_path = "tests/text/exam.txt"
+    output_image_path = os.path.join(os.path.expanduser('~'), 'Downloads', 'output_image.png')
+    output_data_path = os.path.join(os.path.expanduser('~'), 'Downloads', "extracted_data.txt")
+    password = "securepassword"
 
-    # Чтение данных из файла
-    with open(data_path, "rb") as file:
-        data = file.read()
+    # Чтение данных из файла с указанием кодировки
+    with open(data_path, "r", encoding="utf-8") as file:
+        text_data = file.read()
+        data = text_data.encode('utf-8')  # Преобразуем текст в байты
 
     # Загрузка изображения
     image = image_processor.load_image(image_path)
@@ -26,12 +28,18 @@ if __name__ == "__main__":
     modified_image = embedder.embed_data(image, data, password, encryption)
     image_processor.save_image(modified_image, output_image_path)
 
+    # Загрузка модифицированного изображения
+    modified_image = image_processor.load_image(output_image_path)
+
     # Извлечение данных из изображения
     extracted_data = extractor.extract_data(modified_image, password, encryption)
 
+    # Декодирование байтов в строку с использованием UTF-8
+    extracted_text = extracted_data.decode('utf-8')
 
+    # Сохранение извлеченных данных в файл с указанием кодировки
+    with open(output_data_path, "w", encoding="utf-8") as file:
+        file.write(extracted_text)
 
-    # Сохранение извлеченных данных
-    with open(os.path.join(os.path.expanduser('~'), 'Downloads', 'extracted_data.txt'), encoding="utf-8") as file:
-        file.write(extracted_data)
+    print("Извлеченный текст:", extracted_text)
 

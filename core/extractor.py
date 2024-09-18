@@ -3,26 +3,38 @@ import logging
 
 class Extractor:
     """
-    Класс для извлечения данных из изображения.
+    Класс для извлечения данных из изображения методом LSB.
     """
 
     def __init__(self):
+        # Инициализация логгера
         logging.basicConfig(level=logging.INFO)
         self.logger = logging.getLogger(__name__)
 
-    def extract_data(self, image, password, encryption_class):
+    def extract_data(self, image):
         """
-        Извлекает и дешифрует данные из изображения, закодированные с помощью метода LSB.
+        Извлекает данные из изображения без шифрования.
 
         :param image: Image object, изображение для извлечения данных
-        :param password: str, пароль для дешифрования данных
-        :param encryption_class: Encryption, класс для дешифрования данных
-        :return: bytes, извлеченные и расшифрованные данные
+        :return: bytes, извлеченные данные
         """
-        image_data = list(image.getdata())
-        binary_data = ''.join([str(pixel[0] & 1) for pixel in image_data])
-        encrypted_data = int(binary_data, 2).to_bytes((len(binary_data) + 7) // 8, byteorder='big')
+        pixels = list(image.getdata())
+        bits = ''
+        for pixel in pixels:
+            for color in pixel[:3]:
+                bits += str(color & 1)
 
-        decrypted_data = encryption_class.decrypt_data(encrypted_data, password)
+        # Извлекаем длину данных (первые 64 бита)
+        data_len_bits = bits[:64]
+        data_len = int(data_len_bits, 2)
+
+        # Извлекаем данные
+        data_bits = bits[64:64 + data_len * 8]
+        extracted_data = int(data_bits, 2).to_bytes(data_len, byteorder='big')
+
         self.logger.info("Data extracted successfully")
-        return decrypted_data
+        return extracted_data
+
+
+
+

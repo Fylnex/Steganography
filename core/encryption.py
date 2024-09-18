@@ -2,6 +2,7 @@ from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
+from cryptography.hazmat.primitives import padding
 import os
 import logging
 
@@ -12,6 +13,7 @@ class Encryption:
     """
 
     def __init__(self, salt=None):
+        # Генерируем соль для ключа, если она не передана
         self.salt = salt or os.urandom(16)
         logging.basicConfig(level=logging.INFO)
         self.logger = logging.getLogger(__name__)
@@ -44,9 +46,14 @@ class Encryption:
         """
         key = self.derive_key(password)
         iv = os.urandom(16)
-        cipher = Cipher(algorithms.AES(key), modes.CFB(iv), backend=default_backend())
+        cipher = Cipher(algorithms.AES(key), modes.CBC(iv), backend=default_backend())
+
+        # Выравнивание данных (PKCS7)
+        padder = padding.PKCS7(128).padder()
+        padded_data = padder.update(data) + padder.finalize()
+
         encryptor = cipher.encryptor()
-        encrypted_data = encryptor.update(data) + encryptor.finalize()
+        encrypted_data = encryptor.update(padded_data) + encryptor.finalize()
         self.logger.info("Data encrypted successfully")
         return iv + encrypted_data
 
@@ -60,8 +67,18 @@ class Encryption:
         """
         key = self.derive_key(password)
         iv = encrypted_data[:16]
-        cipher = Cipher(algorithms.AES(key), modes.CFB(iv), backend=default_backend())
+        cipher = Cipher(algorithms.AES(key), modes.CBC(iv), backend=default_backend())
+
         decryptor = cipher.decryptor()
-        decrypted_data = decryptor.update(encrypted_data[16:]) + decryptor.finalize()
+        decrypted_padded_data = decryptor.update(encrypted_data[16:]) + decryptor.finalize()
+
+        # Удаление выравнивания (PKCS7)
+        unpadder = padding.PKCS7(128).unpadder()
+        try:
+            decrypted_data = unpadder.update(decrypted_padded_data) + unpadder.finalize()
+        except ValueError as e:
+            self.logger.error(f"Invalid padding: {str(e)}")
+            raise ValueError("Invalid padding or incorrect password.")
+
         self.logger.info("Data decrypted successfully")
         return decrypted_data
